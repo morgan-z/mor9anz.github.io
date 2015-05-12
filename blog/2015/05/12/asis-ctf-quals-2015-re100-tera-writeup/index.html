@@ -1,0 +1,559 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>ASIS CTF Quals 2015 Re100 Tera Writeup - morgan_z&#8217;s blog</title>
+  <meta name="author" content="morgan">
+
+  
+  <meta name="description" content="Running the program shows a progress bar and gives a core dump: 1
+2
+3
+alpha@alpha-th:~/Copy/ctf/asis2015/re/100$ ./ &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="morgan_z's blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">morgan_z&#8217;s blog</a></h1>
+  
+    <h2>a diary of an ordinary person</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="sitesearch" value="morganzz.github.io">
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">ASIS CTF Quals 2015 Re100 Tera Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-05-12T09:06:13+08:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>12</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:06 am</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Running the program shows a progress bar and gives a core dump:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>alpha@alpha-th:~/Copy/ctf/asis2015/re/100$ ./tera_85021482a68d6ed21892ea99b84f13f3
+</span><span class='line'>Please wait until my job be done 
+</span><span class='line'>%0.0000000 [                          Segmentation fault (core dumped)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&rsquo;s look at the output from strace (other lines are omitted):</p>
+
+<!-- more -->
+
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>alpha@alpha-th:~/Copy/ctf/asis2015/re/100$ strace ./tera_85021482a68d6ed21892ea99b84f13f3 &gt; /dev/null 
+</span><span class='line'>...
+</span><span class='line'>open("/tmp/.tera", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 4
+</span><span class='line'>connect(6, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("134.79.129.105")}, 16) = -1 EINPROGRESS (Operation now in progress)
+</span><span class='line'>sendto(6, "GET /simulations/ds14_a/ds14_a_1"..., 99, MSG_NOSIGNAL, NULL, 0) = 99
+</span><span class='line'>recvfrom(6, "HTTP/1.1 404 Not Found\r\nDate: Tu"..., 16384, 0, NULL, NULL) = 506
+</span><span class='line'>write(4, "&lt;!DOCTYPE HTML PUBLIC \"-//IETF//"..., 325) = 325
+</span><span class='line'>open("/tmp/.tera", O_RDONLY)            = 4</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Segmentation fault happens right after the second open(), so something might be wrong while reading the file. From the output above we can see that the program sends GET request to 134.79.129.105 to fetch a file, and the response (starting with &lsquo;&lt;!DOCTYPE HTML PUBLIC&rsquo;) is probably written to /tmp/.tera. Let&rsquo;s open /tmp/.tera:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='html'><span class='line'><span class="cp">&lt;!DOCTYPE HTML PUBLIC &quot;-//IETF//DTD HTML 2.0//EN&quot;&gt;</span>
+</span><span class='line'><span class="nt">&lt;html&gt;&lt;head&gt;</span>
+</span><span class='line'><span class="nt">&lt;title&gt;</span>404 Not Found<span class="nt">&lt;/title&gt;</span>
+</span><span class='line'><span class="nt">&lt;/head&gt;&lt;body&gt;</span>
+</span><span class='line'><span class="nt">&lt;h1&gt;</span>Not Found<span class="nt">&lt;/h1&gt;</span>
+</span><span class='line'><span class="nt">&lt;p&gt;</span>The requested URL /simulations/ds14\_a/ds14\_a\_1.0000ª×} was not found on this server.<span class="nt">&lt;/p&gt;</span>
+</span><span class='line'><span class="nt">&lt;hr&gt;</span>
+</span><span class='line'><span class="nt">&lt;address&gt;</span>Apache/2.2.15 (Red Hat) Server at darksky.slac.stanford.edu Port 80<span class="nt">&lt;/address&gt;</span>
+</span><span class='line'><span class="nt">&lt;/body&gt;&lt;/html&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As we can see, the response is indeed written to /tmp.tera, and we also know the domain of the ip address. But why is it 404 Not found?
+Using gdb to set a break point before the function curl_easy_setopt() to examine its arguments, from which we can know the full URL of the file:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='html'><span class='line'>&quot;http://darksky.slac.stanford.edu/simulations/ds14_a/ds14_a_1.0000\252\327}&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Alright, let&rsquo;s go to &ldquo;<a href="http://darksky.slac.stanford.edu/simulations/ds14_a/">http://darksky.slac.stanford.edu/simulations/ds14_a/</a>&rdquo;:
+<img class="cneter" src="/images/asis2015/tera1.png" title="" ></p>
+
+<p>There is indeed a file called ds14_a_1.0000 (we got response 404 because there are two ending non-ascii characters. We can change \252 to \0 to make the program work), and its size is 31T. Downloading the whole file doesn&rsquo;t seem to be realistic, so let&rsquo;s open IDA to see what the program does after downloading.
+Reading towards the end of sub_400F19 routine, we can see the following code:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">v39</span> <span class="o">=</span> <span class="n">fopen</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">);</span>
+</span><span class='line'><span class="n">v38</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class='line'><span class="n">v16</span> <span class="o">=</span> <span class="n">n</span><span class="p">;</span>
+</span><span class='line'><span class="n">v17</span> <span class="o">=</span> <span class="mi">0LL</span><span class="p">;</span>
+</span><span class='line'><span class="n">v14</span> <span class="o">=</span> <span class="n">alloca</span><span class="p">(</span><span class="mi">16</span> <span class="o">*</span> <span class="p">((</span><span class="n">n</span> <span class="o">+</span> <span class="mi">15</span><span class="p">)</span> <span class="o">/</span> <span class="mh">0x10</span><span class="p">));</span>
+</span><span class='line'><span class="n">ptr</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">v16</span><span class="p">;</span>
+</span><span class='line'><span class="n">fread</span><span class="p">(</span><span class="o">&amp;</span><span class="n">v16</span><span class="p">,</span> <span class="mi">1uLL</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">v39</span><span class="p">);</span>
+</span><span class='line'><span class="k">for</span> <span class="p">(</span> <span class="n">m</span> <span class="o">=</span> <span class="mi">0LL</span><span class="p">;</span> <span class="n">v47</span> <span class="o">&gt;</span> <span class="n">m</span><span class="p">;</span> <span class="o">++</span><span class="n">m</span> <span class="p">)</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%c</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="p">)(</span><span class="kt">char</span><span class="p">)(</span><span class="o">*</span><span class="p">((</span><span class="n">_BYTE</span> <span class="o">*</span><span class="p">)</span><span class="n">ptr</span> <span class="o">+</span> <span class="n">v35</span><span class="p">[</span><span class="n">m</span><span class="p">])</span> <span class="o">^</span> <span class="n">LOBYTE</span><span class="p">(</span><span class="n">v18</span><span class="p">[</span><span class="n">m</span><span class="p">])));</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>n is defined earlier in the same routine, and it is 34359739943392 (this also explains the seg fault earlier, since the file containing &ldquo;404 Not found&rdquo; is much smaller than this). It looks like the program wants to load the whole file into memory, and uses xor between some bytes (depends on array v35) of the file and bytes in array v18. Again, loading 31T into memory is not realistic, so we should use other ways to access the file without downloading it. After looking around at the <a href="http://darksky.slac.stanford.edu/">website</a>, I found that they have a bitbucket repo and <a href="https://bitbucket.org/darkskysims/data_release#markdown-header-python-based-exploration">a tutorial</a> for accessing the data:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="kn">import</span> <span class="nn">thingking</span>
+</span><span class='line'><span class="n">ds14_a</span> <span class="o">=</span> <span class="n">thingking</span><span class="o">.</span><span class="n">HTTPArray</span><span class="p">(</span><span class="s">&quot;http://darksky.slac.stanford.edu/simulations/ds14_a/ds14_a_1.0000&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="k">print</span> <span class="n">ds14_a</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span> <span class="c">#print the 10th byte</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>After installing python package thingking, we can access arbitrary bytes of the file without downloading it :)
+Then the only thing left is to reverse the two arrays (v35 and v18 above). Luckily, they are constructed directly from the values in memory location: 4199552 and 4200064. In gdb:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>gdb-peda$ x/40gx  4199552
+</span><span class='line'>0x401480: 0x0000004c89617cf4  0x000000b4b5e95f83
+</span><span class='line'>0x401490: 0x000000e4598d686b  0x00000136a62674ef
+</span><span class='line'>0x4014a0: 0x000001837a65beb7  0x0000019fa831467c
+</span><span class='line'>0x4014b0: 0x000002a6202acd01  0x000004493f10645e
+</span><span class='line'>0x4014c0: 0x000004cdce6d65e4  0x000005028ec8de7e
+</span><span class='line'>0x4014d0: 0x0000056219504a56  0x000005bd2d191db8
+</span><span class='line'>0x4014e0: 0x0000072bd5d02592  0x0000073dee6d04fe
+</span><span class='line'>0x4014f0: 0x00000a25e5afe320  0x00000a73b464fb9e
+</span><span class='line'>0x401500: 0x00000b6259f6e34b  0x00000b9aa45094dc
+</span><span class='line'>0x401510: 0x00000bc548e0ea39  0x00000c7ac41ecc56
+</span><span class='line'>0x401520: 0x00000c85f073fb8b  0x00000c92536a9116
+</span><span class='line'>0x401530: 0x00000d930be6dabf  0x00000e61b989da40
+</span><span class='line'>0x401540: 0x00000f37999ca268  0x00000fb7c59b9d1f
+</span><span class='line'>0x401550: 0x00001018d3a3939d  0x000010202aed0369
+</span><span class='line'>0x401560: 0x000010e8fb926cf3  0x0000113bc38ea065
+</span><span class='line'>0x401570: 0x000013257504044f  0x000014fb0612dc3c
+</span><span class='line'>0x401580: 0x000016572370da92  0x0000173d75634441
+</span><span class='line'>0x401590: 0x00001b9d0f2d9374  0x00001ba90de42d8e
+</span><span class='line'>0x4015a0: 0x00001be9ef4c8f3e  0x00001bfda4b84e00
+</span><span class='line'>0x4015b0: 0x0000000000000000  0x0000000000000000
+</span><span class='line'>
+</span><span class='line'>gdb-peda$ x/40wx 4200064
+</span><span class='line'>0x401680: 0x000000f2  0x0000009a  0x00000083  0x00000012
+</span><span class='line'>0x401690: 0x00000039  0x00000045  0x000000e7  0x000000f4
+</span><span class='line'>0x4016a0: 0x0000006f  0x000000a1  0x00000006  0x000000e7
+</span><span class='line'>0x4016b0: 0x00000095  0x000000f3  0x00000090  0x000000f2
+</span><span class='line'>0x4016c0: 0x000000f0  0x0000006b  0x00000033  0x000000e3
+</span><span class='line'>0x4016d0: 0x000000a8  0x00000078  0x00000037  0x000000d5
+</span><span class='line'>0x4016e0: 0x00000044  0x00000039  0x00000061  0x0000008a
+</span><span class='line'>0x4016f0: 0x000000fb  0x00000022  0x000000fa  0x0000009e
+</span><span class='line'>0x401700: 0x000000e7  0x00000011  0x00000039  0x000000a6
+</span><span class='line'>0x401710: 0x000000f3  0x00000033  0x00000000  0x40590000</span></code></pre></td></tr></table></div></figure>
+
+
+<p>After having the values of those 2 arrays, we can do xor operations to get the flag. There is a piece of python code for this:</p>
+
+<figure class='code'><figcaption><span> (tera.py)</span> <a href='/downloads/code/asis2015/tera.py'>download</a></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+</pre></td><td class='code'><pre><code class='py'><span class='line'><span class="n">v35</span> <span class="o">=</span> <span class="p">[</span>
+</span><span class='line'>        <span class="mh">0x0000004c89617cf4</span><span class="p">,</span> <span class="mh">0x000000b4b5e95f83</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000e4598d686b</span><span class="p">,</span> <span class="mh">0x00000136a62674ef</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000001837a65beb7</span><span class="p">,</span> <span class="mh">0x0000019fa831467c</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000002a6202acd01</span><span class="p">,</span> <span class="mh">0x000004493f10645e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000004cdce6d65e4</span><span class="p">,</span> <span class="mh">0x000005028ec8de7e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x0000056219504a56</span><span class="p">,</span> <span class="mh">0x000005bd2d191db8</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x0000072bd5d02592</span><span class="p">,</span> <span class="mh">0x0000073dee6d04fe</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000a25e5afe320</span><span class="p">,</span> <span class="mh">0x00000a73b464fb9e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000b6259f6e34b</span><span class="p">,</span> <span class="mh">0x00000b9aa45094dc</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000bc548e0ea39</span><span class="p">,</span> <span class="mh">0x00000c7ac41ecc56</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000c85f073fb8b</span><span class="p">,</span> <span class="mh">0x00000c92536a9116</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000d930be6dabf</span><span class="p">,</span> <span class="mh">0x00000e61b989da40</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000f37999ca268</span><span class="p">,</span> <span class="mh">0x00000fb7c59b9d1f</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00001018d3a3939d</span><span class="p">,</span> <span class="mh">0x000010202aed0369</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000010e8fb926cf3</span><span class="p">,</span> <span class="mh">0x0000113bc38ea065</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000013257504044f</span><span class="p">,</span> <span class="mh">0x000014fb0612dc3c</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000016572370da92</span><span class="p">,</span> <span class="mh">0x0000173d75634441</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00001b9d0f2d9374</span><span class="p">,</span> <span class="mh">0x00001ba90de42d8e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00001be9ef4c8f3e</span><span class="p">,</span> <span class="mh">0x00001bfda4b84e00</span>
+</span><span class='line'>        <span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">v18</span> <span class="o">=</span> <span class="p">[</span>
+</span><span class='line'>        <span class="mh">0x000000f2</span><span class="p">,</span><span class="mh">0x0000009a</span><span class="p">,</span><span class="mh">0x00000083</span><span class="p">,</span><span class="mh">0x00000012</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000039</span><span class="p">,</span><span class="mh">0x00000045</span><span class="p">,</span><span class="mh">0x000000e7</span><span class="p">,</span><span class="mh">0x000000f4</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x0000006f</span><span class="p">,</span><span class="mh">0x000000a1</span><span class="p">,</span><span class="mh">0x00000006</span><span class="p">,</span><span class="mh">0x000000e7</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000095</span><span class="p">,</span><span class="mh">0x000000f3</span><span class="p">,</span><span class="mh">0x00000090</span><span class="p">,</span><span class="mh">0x000000f2</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000f0</span><span class="p">,</span><span class="mh">0x0000006b</span><span class="p">,</span><span class="mh">0x00000033</span><span class="p">,</span><span class="mh">0x000000e3</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000a8</span><span class="p">,</span><span class="mh">0x00000078</span><span class="p">,</span><span class="mh">0x00000037</span><span class="p">,</span><span class="mh">0x000000d5</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000044</span><span class="p">,</span><span class="mh">0x00000039</span><span class="p">,</span><span class="mh">0x00000061</span><span class="p">,</span><span class="mh">0x0000008a</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000fb</span><span class="p">,</span><span class="mh">0x00000022</span><span class="p">,</span><span class="mh">0x000000fa</span><span class="p">,</span><span class="mh">0x0000009e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000e7</span><span class="p">,</span><span class="mh">0x00000011</span><span class="p">,</span><span class="mh">0x00000039</span><span class="p">,</span><span class="mh">0x000000a6</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000f3</span><span class="p">,</span><span class="mh">0x00000033</span>
+</span><span class='line'>        <span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">thingking</span>
+</span><span class='line'><span class="n">ds14_a</span> <span class="o">=</span> <span class="n">thingking</span><span class="o">.</span><span class="n">HTTPArray</span><span class="p">(</span><span class="s">&quot;http://darksky.slac.stanford.edu/simulations/ds14_a/ds14_a_1.0000&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">print</span> <span class="s">&#39;start..&#39;</span>
+</span><span class='line'><span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">38</span><span class="p">):</span>
+</span><span class='line'>    <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="n">ds14_a</span><span class="p">[</span><span class="n">v35</span><span class="p">[</span><span class="n">m</span><span class="p">]][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span class='line'>        <span class="k">print</span> <span class="nb">chr</span><span class="p">(</span><span class="n">v18</span><span class="p">[</span><span class="n">m</span><span class="p">])</span>
+</span><span class='line'>        <span class="k">continue</span>
+</span><span class='line'>    <span class="k">print</span> <span class="nb">chr</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">^</span> <span class="n">v18</span><span class="p">[</span><span class="n">m</span><span class="p">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>running the code:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>alpha@alpha-th:~/Copy/ctf/asis2015/re/100$ python tera.py 
+</span><span class='line'>start..
+</span><span class='line'>A
+</span><span class='line'>S
+</span><span class='line'>I
+</span><span class='line'>S
+</span><span class='line'>{
+</span><span class='line'>3
+</span><span class='line'>1
+</span><span class='line'>4
+</span><span class='line'>9
+</span><span class='line'>a
+</span><span class='line'>d
+</span><span class='line'>5
+</span><span class='line'>d
+</span><span class='line'>3
+</span><span class='line'>6
+</span><span class='line'>2
+</span><span class='line'>9
+</span><span class='line'>5
+</span><span class='line'>8
+</span><span class='line'>1
+</span><span class='line'>b
+</span><span class='line'>1
+</span><span class='line'>7
+</span><span class='line'>2
+</span><span class='line'>7
+</span><span class='line'>9
+</span><span class='line'>c
+</span><span class='line'>c
+</span><span class='line'>8
+</span><span class='line'>8
+</span><span class='line'>9
+</span><span class='line'>2
+</span><span class='line'>2
+</span><span class='line'>2
+</span><span class='line'>b
+</span><span class='line'>9
+</span><span class='line'>3
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>then we get the flag: ASIS{3149ad5d3629581b17279cc889222b93}</p>
+
+<p>This is my first writeup. Any comments are welcome :)</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">morgan</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2015-05-12T09:06:13+08:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>12</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:06 am</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/2015/'>2015</a>, <a class='category' href='/blog/categories/asis/'>asis</a>, <a class='category' href='/blog/categories/ctf/'>ctf</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/04/24/hello-world/" title="Previous Post: hello world">&laquo; hello world</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup/">ASIS CTF Quals 2015 Re100 Tera Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/04/24/hello-world/">Hello World</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - morgan -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'morganz';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup/';
+        var disqus_url = 'http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

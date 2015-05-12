@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Writeup | morgan_z's blog]]></title>
+  <link href="http://morganzz.github.io/blog/categories/writeup/atom.xml" rel="self"/>
+  <link href="http://morganzz.github.io/"/>
+  <updated>2015-05-12T14:08:30+08:00</updated>
+  <id>http://morganzz.github.io/</id>
+  <author>
+    <name><![CDATA[morgan]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[ASIS CTF Quals 2015 Re100 Tera Writeup]]></title>
+    <link href="http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup/"/>
+    <updated>2015-05-12T09:06:13+08:00</updated>
+    <id>http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup</id>
+    <content type="html"><![CDATA[<p>Running the program shows a progress bar and gives a core dump:
+<code>
+alpha@alpha-th:~/Copy/ctf/asis2015/re/100$ ./tera_85021482a68d6ed21892ea99b84f13f3
+Please wait until my job be done
+%0.0000000 [                          Segmentation fault (core dumped)
+</code>
+Let&rsquo;s look at the output from strace (other lines are omitted):</p>
+
+<!-- more -->
+
+
+<pre><code>alpha@alpha-th:~/Copy/ctf/asis2015/re/100$ strace ./tera_85021482a68d6ed21892ea99b84f13f3 &gt; /dev/null 
+...
+open("/tmp/.tera", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 4
+connect(6, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("134.79.129.105")}, 16) = -1 EINPROGRESS (Operation now in progress)
+sendto(6, "GET /simulations/ds14_a/ds14_a_1"..., 99, MSG_NOSIGNAL, NULL, 0) = 99
+recvfrom(6, "HTTP/1.1 404 Not Found\r\nDate: Tu"..., 16384, 0, NULL, NULL) = 506
+write(4, "&lt;!DOCTYPE HTML PUBLIC \"-//IETF//"..., 325) = 325
+open("/tmp/.tera", O_RDONLY)            = 4
+</code></pre>
+
+<p>Segmentation fault happens right after the second open(), so something might be wrong while reading the file. From the output above we can see that the program sends GET request to 134.79.129.105 to fetch a file, and the response (starting with &lsquo;&lt;!DOCTYPE HTML PUBLIC&rsquo;) is probably written to /tmp/.tera. Let&rsquo;s open /tmp/.tera:</p>
+
+<p>&#8220;`html
+&lt;!DOCTYPE HTML PUBLIC &ldquo;-//IETF//DTD HTML 2.0//EN&rdquo;>
+<html><head>
+<title>404 Not Found</title>
+</head><body></p>
+
+<h1>Not Found</h1>
+
+
+<p>The requested URL /simulations/ds14\_a/ds14\_a\_1.0000ª×} was not found on this server.</p>
+
+
+<hr>
+
+
+<address>Apache/2.2.15 (Red Hat) Server at darksky.slac.stanford.edu Port 80</address>
+
+
+<p></body></html>
+<code>
+As we can see, the response is indeed written to /tmp.tera, and we also know the domain of the ip address. But why is it 404 Not found?
+Using gdb to set a break point before the function curl\_easy\_setopt() to examine its arguments, from which we can know the full URL of the file:
+</code>
+&ldquo;<a href="http://darksky.slac.stanford.edu/simulations/ds14_a/ds14_a_1.0000\252\327">http://darksky.slac.stanford.edu/simulations/ds14_a/ds14_a_1.0000\252\327</a>}&rdquo;
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Alright, let&rsquo;s go to &ldquo;&lt;a href="http://darksky.slac.stanford.edu/simulations/ds14_a/"&gt;http://darksky.slac.stanford.edu/simulations/ds14_a/&lt;/a&gt;&rdquo;:
+</span><span class='line'><img class="cneter" src="/images/asis2015/tera1.png" title="" >&lt;/p&gt;
+</span><span class='line'>
+</span><span class='line'>&lt;p&gt;There is indeed a file called ds14_a_1.0000 (we got response 404 because there are two ending non-ascii characters. We can change \252 to \0 to make the program work), and its size is 31T. Downloading the whole file doesn&rsquo;t seem to be realistic, so let&rsquo;s open IDA to see what the program does after downloading.
+</span><span class='line'>Reading towards the end of sub_400F19 routine, we can see the following code:
+</span><span class='line'>&lt;code&gt;c
+</span><span class='line'>v39 = fopen(filename, "r");
+</span><span class='line'>v38 = n - 1;
+</span><span class='line'>v16 = n;
+</span><span class='line'>v17 = 0LL;
+</span><span class='line'>v14 = alloca(16 * ((n + 15) / 0x10));
+</span><span class='line'>ptr = &amp;v16;
+</span><span class='line'>fread(&amp;v16, 1uLL, n, v39);
+</span><span class='line'>for ( m = 0LL; v47 &gt; m; ++m )
+</span><span class='line'>  printf("%c\n", (unsigned int)(char)(*((_BYTE *)ptr + v35[m]) ^ LOBYTE(v18[m])));
+</span><span class='line'>&lt;/code&gt;
+</span><span class='line'>n is defined earlier in the same routine, and it is 34359739943392 (this also explains the seg fault earlier, since the file containing &ldquo;404 Not found&rdquo; is much smaller than this). It looks like the program wants to load the whole file into memory, and uses xor between some bytes (depends on array v35) of the file and bytes in array v18. Again, loading 31T into memory is not realistic, so we should use other ways to access the file without downloading it. After looking around at the &lt;a href="http://darksky.slac.stanford.edu/"&gt;website&lt;/a&gt;, I found that they have a bitbucket repo and &lt;a href="https://bitbucket.org/darkskysims/data_release#markdown-header-python-based-exploration"&gt;a tutorial&lt;/a&gt; for accessing the data:
+</span><span class='line'>&lt;code&gt;python
+</span><span class='line'>import thingking
+</span><span class='line'>ds14_a = thingking.HTTPArray("http://darksky.slac.stanford.edu/simulations/ds14_a/ds14_a_1.0000")
+</span><span class='line'>print ds14_a[10] #print the 10th byte
+</span><span class='line'>&lt;/code&gt;
+</span><span class='line'>After installing python package thingking, we can access arbitrary bytes of the file without downloading it :)
+</span><span class='line'>Then the only thing left is to reverse the two arrays (v35 and v18 above). Luckily, they are constructed directly from the values in memory location: 4199552 and 4200064. In gdb:</span></code></pre></td></tr></table></div></figure> plain
+gdb-peda$ x/40gx  4199552
+0x401480:   0x0000004c89617cf4  0x000000b4b5e95f83
+0x401490:   0x000000e4598d686b  0x00000136a62674ef
+0x4014a0:   0x000001837a65beb7  0x0000019fa831467c
+0x4014b0:   0x000002a6202acd01  0x000004493f10645e
+0x4014c0:   0x000004cdce6d65e4  0x000005028ec8de7e
+0x4014d0:   0x0000056219504a56  0x000005bd2d191db8
+0x4014e0:   0x0000072bd5d02592  0x0000073dee6d04fe
+0x4014f0:   0x00000a25e5afe320  0x00000a73b464fb9e
+0x401500:   0x00000b6259f6e34b  0x00000b9aa45094dc
+0x401510:   0x00000bc548e0ea39  0x00000c7ac41ecc56
+0x401520:   0x00000c85f073fb8b  0x00000c92536a9116
+0x401530:   0x00000d930be6dabf  0x00000e61b989da40
+0x401540:   0x00000f37999ca268  0x00000fb7c59b9d1f
+0x401550:   0x00001018d3a3939d  0x000010202aed0369
+0x401560:   0x000010e8fb926cf3  0x0000113bc38ea065
+0x401570:   0x000013257504044f  0x000014fb0612dc3c
+0x401580:   0x000016572370da92  0x0000173d75634441
+0x401590:   0x00001b9d0f2d9374  0x00001ba90de42d8e
+0x4015a0:   0x00001be9ef4c8f3e  0x00001bfda4b84e00
+0x4015b0:   0x0000000000000000  0x0000000000000000</p>
+
+<p>gdb-peda$ x/40wx 4200064
+0x401680:   0x000000f2  0x0000009a  0x00000083  0x00000012
+0x401690:   0x00000039  0x00000045  0x000000e7  0x000000f4
+0x4016a0:   0x0000006f  0x000000a1  0x00000006  0x000000e7
+0x4016b0:   0x00000095  0x000000f3  0x00000090  0x000000f2
+0x4016c0:   0x000000f0  0x0000006b  0x00000033  0x000000e3
+0x4016d0:   0x000000a8  0x00000078  0x00000037  0x000000d5
+0x4016e0:   0x00000044  0x00000039  0x00000061  0x0000008a
+0x4016f0:   0x000000fb  0x00000022  0x000000fa  0x0000009e
+0x401700:   0x000000e7  0x00000011  0x00000039  0x000000a6
+0x401710:   0x000000f3  0x00000033  0x00000000  0x40590000
+&#8220;`</p>
+
+<p>After having the values of those 2 arrays, we can do xor operations to get the flag. There is a piece of python code for this:
+<figure class='code'><figcaption><span> (tera.py)</span> <a href='/downloads/code/asis2015/tera.py'>download</a></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+</pre></td><td class='code'><pre><code class='py'><span class='line'><span class="n">v35</span> <span class="o">=</span> <span class="p">[</span>
+</span><span class='line'>        <span class="mh">0x0000004c89617cf4</span><span class="p">,</span> <span class="mh">0x000000b4b5e95f83</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000e4598d686b</span><span class="p">,</span> <span class="mh">0x00000136a62674ef</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000001837a65beb7</span><span class="p">,</span> <span class="mh">0x0000019fa831467c</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000002a6202acd01</span><span class="p">,</span> <span class="mh">0x000004493f10645e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000004cdce6d65e4</span><span class="p">,</span> <span class="mh">0x000005028ec8de7e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x0000056219504a56</span><span class="p">,</span> <span class="mh">0x000005bd2d191db8</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x0000072bd5d02592</span><span class="p">,</span> <span class="mh">0x0000073dee6d04fe</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000a25e5afe320</span><span class="p">,</span> <span class="mh">0x00000a73b464fb9e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000b6259f6e34b</span><span class="p">,</span> <span class="mh">0x00000b9aa45094dc</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000bc548e0ea39</span><span class="p">,</span> <span class="mh">0x00000c7ac41ecc56</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000c85f073fb8b</span><span class="p">,</span> <span class="mh">0x00000c92536a9116</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000d930be6dabf</span><span class="p">,</span> <span class="mh">0x00000e61b989da40</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000f37999ca268</span><span class="p">,</span> <span class="mh">0x00000fb7c59b9d1f</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00001018d3a3939d</span><span class="p">,</span> <span class="mh">0x000010202aed0369</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000010e8fb926cf3</span><span class="p">,</span> <span class="mh">0x0000113bc38ea065</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000013257504044f</span><span class="p">,</span> <span class="mh">0x000014fb0612dc3c</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000016572370da92</span><span class="p">,</span> <span class="mh">0x0000173d75634441</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00001b9d0f2d9374</span><span class="p">,</span> <span class="mh">0x00001ba90de42d8e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00001be9ef4c8f3e</span><span class="p">,</span> <span class="mh">0x00001bfda4b84e00</span>
+</span><span class='line'>        <span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">v18</span> <span class="o">=</span> <span class="p">[</span>
+</span><span class='line'>        <span class="mh">0x000000f2</span><span class="p">,</span><span class="mh">0x0000009a</span><span class="p">,</span><span class="mh">0x00000083</span><span class="p">,</span><span class="mh">0x00000012</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000039</span><span class="p">,</span><span class="mh">0x00000045</span><span class="p">,</span><span class="mh">0x000000e7</span><span class="p">,</span><span class="mh">0x000000f4</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x0000006f</span><span class="p">,</span><span class="mh">0x000000a1</span><span class="p">,</span><span class="mh">0x00000006</span><span class="p">,</span><span class="mh">0x000000e7</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000095</span><span class="p">,</span><span class="mh">0x000000f3</span><span class="p">,</span><span class="mh">0x00000090</span><span class="p">,</span><span class="mh">0x000000f2</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000f0</span><span class="p">,</span><span class="mh">0x0000006b</span><span class="p">,</span><span class="mh">0x00000033</span><span class="p">,</span><span class="mh">0x000000e3</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000a8</span><span class="p">,</span><span class="mh">0x00000078</span><span class="p">,</span><span class="mh">0x00000037</span><span class="p">,</span><span class="mh">0x000000d5</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x00000044</span><span class="p">,</span><span class="mh">0x00000039</span><span class="p">,</span><span class="mh">0x00000061</span><span class="p">,</span><span class="mh">0x0000008a</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000fb</span><span class="p">,</span><span class="mh">0x00000022</span><span class="p">,</span><span class="mh">0x000000fa</span><span class="p">,</span><span class="mh">0x0000009e</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000e7</span><span class="p">,</span><span class="mh">0x00000011</span><span class="p">,</span><span class="mh">0x00000039</span><span class="p">,</span><span class="mh">0x000000a6</span><span class="p">,</span>
+</span><span class='line'>        <span class="mh">0x000000f3</span><span class="p">,</span><span class="mh">0x00000033</span>
+</span><span class='line'>        <span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">thingking</span>
+</span><span class='line'><span class="n">ds14_a</span> <span class="o">=</span> <span class="n">thingking</span><span class="o">.</span><span class="n">HTTPArray</span><span class="p">(</span><span class="s">&quot;http://darksky.slac.stanford.edu/simulations/ds14_a/ds14_a_1.0000&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">print</span> <span class="s">&#39;start..&#39;</span>
+</span><span class='line'><span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">38</span><span class="p">):</span>
+</span><span class='line'>    <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="n">ds14_a</span><span class="p">[</span><span class="n">v35</span><span class="p">[</span><span class="n">m</span><span class="p">]][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span class='line'>        <span class="k">print</span> <span class="nb">chr</span><span class="p">(</span><span class="n">v18</span><span class="p">[</span><span class="n">m</span><span class="p">])</span>
+</span><span class='line'>        <span class="k">continue</span>
+</span><span class='line'>    <span class="k">print</span> <span class="nb">chr</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">^</span> <span class="n">v18</span><span class="p">[</span><span class="n">m</span><span class="p">])</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>running the code:</p>
+
+<pre><code>alpha@alpha-th:~/Copy/ctf/asis2015/re/100$ python tera.py 
+start..
+A
+S
+I
+S
+{
+3
+1
+4
+9
+a
+d
+5
+d
+3
+6
+2
+9
+5
+8
+1
+b
+1
+7
+2
+7
+9
+c
+c
+8
+8
+9
+2
+2
+2
+b
+9
+3
+}
+</code></pre>
+
+<p>then we get the flag: ASIS{3149ad5d3629581b17279cc889222b93}</p>
+
+<p>This is my first writeup. Any comments are welcome :)</p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -1,0 +1,41 @@
+#include<stdio.h>
+
+int main()
+{
+    long long v1a[39] = {0x0000004c89617cf4LL,0x000000b4b5e95f83LL,0x000000e4598d686bLL,0x00000136a62674efLL,0x000001837a65beb7LL,0x0000019fa831467cLL,0x000002a6202acd01LL,0x000004493f10645eLL,0x000004cdce6d65e4LL,0x000005028ec8de7eLL,0x0000056219504a56LL,0x000005bd2d191db8LL,0x0000072bd5d02592LL,0x0000073dee6d04feLL,0x00000a25e5afe320LL,0x00000a73b464fb9eLL,0x00000b6259f6e34bLL,0x00000b9aa45094dcLL,0x00000bc548e0ea39LL,0x00000c7ac41ecc56LL,0x00000c85f073fb8bLL,0x00000c92536a9116LL,0x00000d930be6dabfLL,0x00000e61b989da40LL,0x00000f37999ca268LL,0x00000fb7c59b9d1fLL,0x00001018d3a3939dLL,0x000010202aed0369LL,0x000010e8fb926cf3LL,0x0000113bc38ea065LL,0x000013257504044fLL,0x000014fb0612dc3cLL,0x000016572370da92LL,0x0000173d75634441LL,0x00001b9d0f2d9374LL,0x00001ba90de42d8eLL,0x00001be9ef4c8f3eLL,0x00001bfda4b84e00LL,0LL};
+    long long v35[39];
+    long long v1 = v1a;
+    long long v2 = (long long)v35;
+
+    int i;
+    for (i=38;i;i--){
+        *((long long int *)v2) = *((long long int *)v1);
+        v1 += 8LL;
+        v2 += 8LL;
+    }
+
+    printf("v35:\n");
+    for (i=0;i<39;i++){
+        printf("%lld\t",v35[i]);
+    }
+    printf("\n");
+
+
+    long long v10a[20] = { 0x0000009a000000f2LL,0x0000001200000083LL,0x0000004500000039LL,0x000000f4000000e7LL,0x000000a10000006fLL,0x000000e700000006LL,0x000000f300000095LL,0x000000f200000090LL,0x0000006b000000f0LL,0x000000e300000033LL,0x00000078000000a8LL,0x000000d500000037LL,0x0000003900000044LL,0x0000008a00000061LL,0x00000022000000fbLL,0x0000009e000000faLL,0x00000011000000e7LL,0x000000a600000039LL,0x00000033000000f3LL};
+    int v18[40];
+    long long v10 = v10a;
+    long long v11 = v18;
+    
+    int l;
+    for (l=19;l;l--){
+        *((long long int *)v11) = *((long long int *)v10);
+        v10 += 8LL;
+        v11 += 8LL;
+    }
+
+    printf("\nv18:\n");
+    for (i=0;i<38;i++){
+        printf("%d\t",v18[i]);
+    }
+    printf("\n");
+}
