@@ -1,13 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://morganzz.github.io/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup/</loc>
+    <lastmod>2015-05-23T15:56:33+08:00</lastmod>
+  </url>
+  <url>
+    <loc>http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup/</loc>
+    <lastmod>2015-05-12T09:06:13+08:00</lastmod>
+  </url>
+  <url>
     <loc>http://morganzz.github.io/blog/2015/04/24/hello-world/</loc>
-    <lastmod>2015-04-24T00:08:44-07:00</lastmod>
+    <lastmod>2015-04-24T15:08:44+08:00</lastmod>
   </url>
   <url>
     <loc>http://morganzz.github.io/</loc>
   </url>
   <url>
     <loc>http://morganzz.github.io/blog/archives/</loc>
+  </url>
+  <url>
+    <loc>http://morganzz.github.io/blog/categories/ctf/</loc>
+  </url>
+  <url>
+    <loc>http://morganzz.github.io/blog/categories/writeup/</loc>
+  </url>
+  <url>
+    <loc>http://morganzz.github.io/blog/categories/asis/</loc>
+  </url>
+  <url>
+    <loc>http://morganzz.github.io/blog/categories/2015/</loc>
+  </url>
+  <url>
+    <loc>http://morganzz.github.io/blog/categories/defcon/</loc>
   </url>
 </urlset>
