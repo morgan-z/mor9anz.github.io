@@ -1,43 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>http://morganzz.github.io/blog/2015/07/15/polictf-2015-pwnable150-johns-library-writeup/</loc>
-    <lastmod>2015-07-15T07:59:02+08:00</lastmod>
+    <loc>http://blog.morganz.me/blog/2015/07/14/polictf-2015-pwnable150-johns-library-writeup/</loc>
+    <lastmod>2015-07-14T18:59:02-05:00</lastmod>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup/</loc>
-    <lastmod>2015-05-23T15:56:33+08:00</lastmod>
+    <loc>http://blog.morganz.me/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup/</loc>
+    <lastmod>2015-05-23T02:56:33-05:00</lastmod>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup/</loc>
-    <lastmod>2015-05-12T09:06:13+08:00</lastmod>
+    <loc>http://blog.morganz.me/blog/2015/05/11/asis-ctf-quals-2015-re100-tera-writeup/</loc>
+    <lastmod>2015-05-11T20:06:13-05:00</lastmod>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/2015/04/24/hello-world/</loc>
-    <lastmod>2015-04-24T15:08:44+08:00</lastmod>
+    <loc>http://blog.morganz.me/blog/2015/04/24/hello-world/</loc>
+    <lastmod>2015-04-24T02:08:44-05:00</lastmod>
   </url>
   <url>
-    <loc>http://morganzz.github.io/</loc>
+    <loc>http://blog.morganz.me/</loc>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/archives/</loc>
+    <loc>http://blog.morganz.me/blog/archives/</loc>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/categories/ctf/</loc>
+    <loc>http://blog.morganz.me/blog/categories/ctf/</loc>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/categories/writeup/</loc>
+    <loc>http://blog.morganz.me/blog/categories/writeup/</loc>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/categories/asis/</loc>
+    <loc>http://blog.morganz.me/blog/categories/asis/</loc>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/categories/2015/</loc>
+    <loc>http://blog.morganz.me/blog/categories/2015/</loc>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/categories/defcon/</loc>
+    <loc>http://blog.morganz.me/blog/categories/defcon/</loc>
   </url>
   <url>
-    <loc>http://morganzz.github.io/blog/categories/polictf/</loc>
+    <loc>http://blog.morganz.me/blog/categories/polictf/</loc>
   </url>
 </urlset>

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[morgan_z's blog]]></title>
-  <link href="http://morganzz.github.io/atom.xml" rel="self"/>
-  <link href="http://morganzz.github.io/"/>
-  <updated>2015-07-16T17:40:27+08:00</updated>
-  <id>http://morganzz.github.io/</id>
+  <title><![CDATA[morganz's blog]]></title>
+  <link href="http://blog.morganz.me/atom.xml" rel="self"/>
+  <link href="http://blog.morganz.me/"/>
+  <updated>2016-12-16T11:46:42-06:00</updated>
+  <id>http://blog.morganz.me/</id>
   <author>
-    <name><![CDATA[morgan]]></name>
+    <name><![CDATA[morganz]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[PoliCTF 2015 Pwnable150 John's Library Writeup]]></title>
-    <link href="http://morganzz.github.io/blog/2015/07/15/polictf-2015-pwnable150-johns-library-writeup/"/>
-    <updated>2015-07-15T07:59:02+08:00</updated>
-    <id>http://morganzz.github.io/blog/2015/07/15/polictf-2015-pwnable150-johns-library-writeup</id>
+    <link href="http://blog.morganz.me/blog/2015/07/14/polictf-2015-pwnable150-johns-library-writeup/"/>
+    <updated>2015-07-14T18:59:02-05:00</updated>
+    <id>http://blog.morganz.me/blog/2015/07/14/polictf-2015-pwnable150-johns-library-writeup</id>
     <content type="html"><![CDATA[<p>The server (<a href="https://github.com/ctfs/write-ups-2015/tree/master/polictf-2015/pwnable/johns-library">download</a>) is a 32-bit non-stripped binary. When we connect to the server, we got three options:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
@@ -231,7 +231,7 @@
 
 <p>Here are the code the and the result:</p>
 
-<figure class='code'><figcaption><span> (johns-library.py)</span> <a href='http://morganzz.github.io/downloads/code/poli2015/johns-library.py'>download</a></figcaption>
+<figure class='code'><figcaption><span> (johns-library.py)</span> <a href='http://blog.morganz.me/downloads/code/poli2015/johns-library.py'>download</a></figcaption>
 <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -421,9 +421,9 @@
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2015 Wibbly Wobbly Timey Wimey Writeup]]></title>
-    <link href="http://morganzz.github.io/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup/"/>
-    <updated>2015-05-23T15:56:33+08:00</updated>
-    <id>http://morganzz.github.io/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup</id>
+    <link href="http://blog.morganz.me/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup/"/>
+    <updated>2015-05-23T02:56:33-05:00</updated>
+    <id>http://blog.morganz.me/blog/2015/05/23/def-con-ctf-qualifier-2015-wibbly-wobbly-timey-wimey-writeup</id>
     <content type="html"><![CDATA[<p>This is my second time participating in DC qualifier, and it is really a fun experience.</p>
 
 <p>This challenge (<a href="https://github.com/ctfs/write-ups-2015/tree/master/defcon-qualifier-ctf-2015/pwnable/wibbly-wobbly-timey-wimey">download</a>) involves multiple steps. When we connect to the server, we need to play a game first.</p>
@@ -699,7 +699,7 @@
 
 <p>Here are the code and the result:</p>
 
-<figure class='code'><figcaption><span> (wwtw.py)</span> <a href='http://morganzz.github.io/downloads/code/defcon2015/wwtw.py'>download</a></figcaption>
+<figure class='code'><figcaption><span> (wwtw.py)</span> <a href='http://blog.morganz.me/downloads/code/defcon2015/wwtw.py'>download</a></figcaption>
 <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1007,9 +1007,9 @@
   
   <entry>
     <title type="html"><![CDATA[ASIS CTF Quals 2015 Re100 Tera Writeup]]></title>
-    <link href="http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup/"/>
-    <updated>2015-05-12T09:06:13+08:00</updated>
-    <id>http://morganzz.github.io/blog/2015/05/12/asis-ctf-quals-2015-re100-tera-writeup</id>
+    <link href="http://blog.morganz.me/blog/2015/05/11/asis-ctf-quals-2015-re100-tera-writeup/"/>
+    <updated>2015-05-11T20:06:13-05:00</updated>
+    <id>http://blog.morganz.me/blog/2015/05/11/asis-ctf-quals-2015-re100-tera-writeup</id>
     <content type="html"><![CDATA[<p>Running the program shows a progress bar and gives a core dump:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
@@ -1075,7 +1075,7 @@ Using gdb to set a break point before the function curl_easy_setopt() to examine
 
 
 <p>Alright, let&rsquo;s go to &ldquo;<a href="http://darksky.slac.stanford.edu/simulations/ds14_a/">http://darksky.slac.stanford.edu/simulations/ds14_a/</a>&rdquo;:
-<img class="cneter" src="http://morganzz.github.io/images/asis2015/tera1.png" title="" ></p>
+<img class="cneter" src="http://blog.morganz.me/images/asis2015/tera1.png" title="" ></p>
 
 <p>There is indeed a file called ds14_a_1.0000 (we got response 404 because there are two ending non-ascii characters. We can change \252 to \0 to make the program work), and its size is 31T. Downloading the whole file doesn&rsquo;t seem to be realistic, so let&rsquo;s open IDA to see what the program does after downloading.
 Reading towards the end of sub_400F19 routine, we can see the following code:</p>
@@ -1185,7 +1185,7 @@ Then the only thing left is to reverse the two arrays (v35 and v18 above). Lucki
 
 <p>After having the values of those 2 arrays, we can do xor operations to get the flag. There is a piece of python code for this:</p>
 
-<figure class='code'><figcaption><span> (tera.py)</span> <a href='http://morganzz.github.io/downloads/code/asis2015/tera.py'>download</a></figcaption>
+<figure class='code'><figcaption><span> (tera.py)</span> <a href='http://blog.morganz.me/downloads/code/asis2015/tera.py'>download</a></figcaption>
 <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1371,9 +1371,9 @@ Then the only thing left is to reverse the two arrays (v35 and v18 above). Lucki
   
   <entry>
     <title type="html"><![CDATA[Hello World]]></title>
-    <link href="http://morganzz.github.io/blog/2015/04/24/hello-world/"/>
-    <updated>2015-04-24T15:08:44+08:00</updated>
-    <id>http://morganzz.github.io/blog/2015/04/24/hello-world</id>
+    <link href="http://blog.morganz.me/blog/2015/04/24/hello-world/"/>
+    <updated>2015-04-24T02:08:44-05:00</updated>
+    <id>http://blog.morganz.me/blog/2015/04/24/hello-world</id>
     <content type="html"><![CDATA[<p>hi, I&rsquo;m morgan.</p>
 ]]></content>
   </entry>
